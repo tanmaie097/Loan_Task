@@ -14,40 +14,38 @@ if uploaded_file:
     with st.spinner("🔍 Extracting text from document..."):
         extracted_text = run_ocr(uploaded_file)
 
-    st.subheader("📜 Extracted Text")
+    st.subheader("🔍 Extracted Text")
     st.text_area("Text", extracted_text, height=200)
 
-    if "OCR error" not in extracted_text and "OCR failed" not in extracted_text:
-        fields = extract_fields(extracted_text)
+    st.subheader("📌 Extracted Fields")
+    extracted_data = extract_fields(extracted_text)
 
-        st.subheader("📊 Loan Eligibility Field Summary")
+    key_fields = ["Name", "PAN", "Income", "Bank Account Number"]
+    eligibility_data = []
+    present_count = 0
+    extra_fields = {}
 
-        important_fields = ["Name", "PAN", "Income", "Bank Account Number"]
-        data = []
+    for field in key_fields:
+        value = extracted_data.get(field, "")
+        status = "✅ Present" if value else "❌ Missing"
+        if value:
+            present_count += 1
+        eligibility_data.append({"Field": field, "Value": value, "Status": status})
 
-        for field in important_fields:
-            value = fields.get(field, "")
-            status = "✅ Present" if value else "❌ Missing"
-            data.append({"Field": field, "Value": value or "-", "Status": status})
+    for k, v in extracted_data.items():
+        if k not in key_fields:
+            extra_fields[k] = v
 
-        df = pd.DataFrame(data)
-        st.table(df)
+    st.subheader("📊 Loan Eligibility Field Summary")
+    df = pd.DataFrame(eligibility_data)
+    st.dataframe(df, use_container_width=True)
 
-        # Eligibility Check: 3 out of 4 fields must be present
-        present_count = sum(1 for item in data if item["Status"] == "✅ Present")
-
-        if present_count >= 3:
-            st.success("🎯 Eligible: Sufficient information found for loan consideration.")
-        else:
-            st.warning("⚠️ Not Eligible: Please upload a clearer or more complete document.")
-
-        # Optional: Show extra fields found
-        st.subheader("📌 Extra Details (if any)")
-        extra_info = {k: v for k, v in fields.items() if k not in important_fields}
-        if extra_info:
-            for key, value in extra_info.items():
-                st.write(f"**{key}:** {value}")
-        else:
-            st.info("No additional fields detected.")
+    if present_count >= 3:
+        st.success("✅ This document is likely eligible for loan processing.")
     else:
-        st.error(extracted_text)
+        st.error("❌ Not enough information for eligibility. At least 3 out of 4 key fields must be present.")
+
+    if extra_fields:
+        st.subheader("ℹ️ Extra Extracted Details")
+        for k, v in extra_fields.items():
+            st.markdown(f"**{k}**: {v}")
