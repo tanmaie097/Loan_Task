@@ -3,7 +3,6 @@ from PIL import Image
 import numpy as np
 from util.ocr_utils import run_ocr, extract_fields
 
-
 st.set_page_config(page_title="Loan Document OCR", layout="centered")
 st.title("📄 Automated Loan Document Extractor")
 
@@ -17,16 +16,10 @@ if uploaded_file:
         img_np = np.array(image)
         extracted_text = run_ocr(img_np)
 
-    st.subheader("🧾 Extracted Raw Text")
+    st.subheader("📝 Extracted Raw Text")
     st.text(extracted_text)
 
-    st.subheader("📝 Key Fields")
+    st.subheader("🔑 Key Fields")
     fields = extract_fields(extracted_text)
-
-    for key, val in fields.items():
-        st.text_input(f"{key}", value=val)
-
-    if st.button("✅ Submit"):
-        st.success("Data submitted!")
-        st.json(fields)
-
+    for key, value in fields.items():
+        st.markdown(f"**{key}:** {value}")
