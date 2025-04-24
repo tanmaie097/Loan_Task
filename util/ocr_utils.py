@@ -6,7 +6,7 @@ def run_ocr(image):
     response = requests.post(
         url,
         files={'filename': image},
-        data={'apikey': 'YOUR_API_KEY_HERE', 'language': 'eng'},  # Replace with your actual key
+        data={'apikey': 'K84750525988957', 'language': 'eng'},  # Replace with your actual key
     )
 
     try:
