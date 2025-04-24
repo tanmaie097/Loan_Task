@@ -9,12 +9,15 @@ from util.field_extraction import extract_important_fields
 st.set_page_config(page_title="🧾 Loan Document Analyzer", layout="centered")
 st.title("📄 Automated Loan Document Processing")
 
-uploaded_file = st.file_uploader("Upload a document (image or PDF)", type=["png", "jpg", "jpeg"])
-
+uploaded_file = st.file_uploader("Upload a salary slip", type=["png", "jpg", "jpeg", "pdf"])
 if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert('RGB')
-    img_np = np.array(image)
-    st.image(img_np, caption='Uploaded Document', use_column_width=True)
+    from PIL import Image
+    img = Image.open(uploaded_file)
+    st.image(img, caption="Uploaded Document", use_column_width=True)
+
+    extracted_text = run_ocr(img)
+    # the rest of your code...
+
 
     # OCR Text Extraction
     extracted_text = run_ocr(img_np)
