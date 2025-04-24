@@ -6,11 +6,16 @@ def run_ocr(image):
     response = requests.post(
         url,
         files={'filename': image},
-        data={'apikey': 'K84750525988957', 'language': 'eng'},
+        data={'apikey': 'K84750525988957', 'language': 'eng'},  # Replace with your actual key
     )
-    result = response.json()
-    text = result.get("ParsedResults", [{}])[0].get("ParsedText", "")
-    return text
+
+    try:
+        result = response.json()
+        if result.get("IsErroredOnProcessing"):
+            return "OCR failed: " + result.get("ErrorMessage", ["Unknown error"])[0]
+        return result["ParsedResults"][0]["ParsedText"]
+    except Exception as e:
+        return f"OCR error: {e}"
 
 def extract_fields(text):
     fields = {}
