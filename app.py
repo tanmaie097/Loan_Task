@@ -1,59 +1,50 @@
 import streamlit as st
 from PIL import Image
+import pandas as pd
 from util.ocr_utils import run_ocr, extract_fields
 
-st.set_page_config(page_title="Loan Document Analyzer", layout="centered")
+st.set_page_config(page_title="📄 Automated Loan Document Processor", layout="centered")
 
 st.title("📄 Automated Loan Document Processor")
-st.write("Upload a **salary slip** to check eligibility for a personal loan.")
+st.write("Upload a salary slip to check eligibility for a personal loan.")
 
 uploaded_file = st.file_uploader("Upload a salary slip", type=["png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
+    st.subheader("🖼️ Uploaded Document")
     img = Image.open(uploaded_file)
-    st.image(img, caption="Uploaded Document", use_column_width=True)
+    st.image(img, caption="Uploaded Image", use_container_width=True)
 
-    with st.spinner("🔍 Extracting text..."):
+    with st.spinner("🔍 Extracting text from document..."):
         extracted_text = run_ocr(img)
     
     st.subheader("🔍 Extracted Text")
     st.text_area("Text", extracted_text, height=200)
 
-    extracted_fields, extra_info = extract_fields(extracted_text)
+    with st.spinner("📌 Extracting key fields..."):
+        fields, extra_info = extract_fields(extracted_text)
 
-    st.subheader("📌 Extracted Fields")
-    st.write(extracted_fields)
+    # Prepare data for table
+    expected_fields = ["Name", "PAN", "Income", "Bank Account Number"]
+    data = []
+    for field in expected_fields:
+        value = fields.get(field, "❌ Missing")
+        status = "✅ Present" if value != "❌ Missing" else "❌ Missing"
+        data.append({"Field": field, "Value": value, "Status": status})
 
-    # Check loan eligibility
-    required_fields = ["Name", "PAN", "Income", "Bank Account Number"]
-    field_status = []
-    match_count = 0
+    df = pd.DataFrame(data)
 
-    for field in required_fields:
-        value = extracted_fields.get(field)
-        status = "✅ Present" if value else "❌ Missing"
-        if value:
-            match_count += 1
-        field_status.append((field, value or "—", status))
-
-    # Show summary as a table
     st.subheader("📊 Loan Eligibility Field Summary")
-    st.table(
-        {
-            "Field": [row[0] for row in field_status],
-            "Value": [row[1] for row in field_status],
-            "Status": [row[2] for row in field_status],
-        }
-    )
+    st.dataframe(df, use_container_width=True)
 
-    # Eligibility decision
-    if match_count >= 3:
-        st.success("✅ This document is likely eligible for loan processing.")
+    present_fields = sum(1 for row in data if row["Status"] == "✅ Present")
+
+    if present_fields >= 3:
+        st.success("🎉 Eligible for Personal Loan ✅")
     else:
-        st.warning("⚠️ This document may be missing key information for eligibility.")
+        st.error("❌ Not Eligible for Personal Loan")
 
-    # Show any extra useful info found
     if extra_info:
-        st.subheader("🧠 Additional Detected Details")
+        st.subheader("📎 Extra Extracted Details")
         for key, value in extra_info.items():
-            st.write(f"**{key}**: {value}")
+            st.markdown(f"**{key}**: {value}")
