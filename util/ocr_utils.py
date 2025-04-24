@@ -3,7 +3,7 @@ import re
 
 # Replace this with your actual OCR API endpoint and key (for OCR.Space or similar)
 API_URL = "https://api.ocr.space/parse/image"
-API_KEY = "your_api_key_here"  # 🔑 Replace with your real API key
+API_KEY = "K84750525988957"  # 🔑 Replace with your real API key
 
 def run_ocr(image):
     # Convert PIL image to bytes
@@ -15,7 +15,7 @@ def run_ocr(image):
     response = requests.post(
         API_URL,
         files={"filename": buffered},
-        data={"apikey": K84750525988957, "language": "eng"},
+        data={"apikey": API_KEY, "language": "eng"},
     )
 
     result = response.json()
