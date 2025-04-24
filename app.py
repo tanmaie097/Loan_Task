@@ -1,51 +1,51 @@
 import streamlit as st
-import pandas as pd
+import numpy as np
+from PIL import Image
 from util.ocr_utils import run_ocr, extract_fields
+import pandas as pd
 
-st.set_page_config(page_title="📄 Loan Document Analyzer", layout="centered")
+st.set_page_config(page_title="📄 Automated Loan Document Processor")
 
 st.title("📄 Automated Loan Document Processor")
-st.markdown("Upload a **salary slip** to check eligibility for a personal loan.")
+st.caption("Upload a salary slip to check eligibility for a personal loan.")
 
 uploaded_file = st.file_uploader("Upload a salary slip", type=["png", "jpg", "jpeg"])
 
-api_key = st.text_input("🔑 Enter your OCR.Space API Key", type="password")
+if uploaded_file:
+    image = Image.open(uploaded_file).convert("RGB")
+    img_np = np.array(image)
 
-if uploaded_file and api_key:
-    st.image(uploaded_file, caption="Uploaded Document", use_container_width=True)
-    
-    bytes_data = uploaded_file.read()
-    extracted_text = run_ocr(bytes_data, api_key)
+    st.image(image, caption="📄 Uploaded Document", use_container_width=True)
 
-    if not extracted_text.strip():
-        st.error("❌ Could not extract any text. Please check your API key or try another image.")
+    with st.spinner("🔍 Extracting text..."):
+        extracted_text = run_ocr(img_np)
+        fields, extra_info = extract_fields(extracted_text)
+
+    st.subheader("🔍 Extracted Text")
+    st.text(extracted_text)
+
+    st.subheader("📌 Extracted Fields")
+    df = pd.DataFrame(
+        [
+            {
+                "Field": key,
+                "Value": value if value else "❌ Missing",
+                "Status": "✅ Present" if value else "❌ Missing",
+            }
+            for key, value in fields.items()
+        ]
+    )
+
+    st.markdown("### 📊 Loan Eligibility Field Summary")
+    st.dataframe(df, use_container_width=True)
+
+    present_fields = sum(1 for v in fields.values() if v)
+    if present_fields >= 3:
+        st.success("✅ Eligible for loan processing.")
     else:
-        st.subheader("🔍 Extracted Text")
-        st.text(extracted_text)
+        st.error("❌ Not enough valid details for eligibility.")
 
-        fields = extract_fields(extracted_text)
-        results = []
-
-        for field, value in fields.items():
-            if field != "Extra Details":
-                results.append({
-                    "Field": field,
-                    "Value": value if value else "❌ Missing",
-                    "Status": "✅ Present" if value else "❌ Missing"
-                })
-
-        df = pd.DataFrame(results)
-
-        st.subheader("📊 Loan Eligibility Field Summary")
-        st.dataframe(df, use_container_width=True)
-
-        valid_fields = sum(1 for val in fields.values() if val and val != "Extra Details")
-        if valid_fields >= 3:
-            st.success("✅ Eligible for loan processing.")
-        else:
-            st.warning("⚠️ Not enough information for loan eligibility.")
-
-        if fields["Extra Details"]:
-            st.subheader("🧾 Extra Details Found")
-            for detail in fields["Extra Details"]:
-                st.markdown(f"- {detail}")
+    if extra_info:
+        st.markdown("### ℹ️ Additional Detected Info")
+        for info in extra_info:
+            st.markdown(f"- {info}")
