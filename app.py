@@ -9,7 +9,7 @@ st.title("📄 Automated Personal Loan Document OCR")
 uploaded_file = st.file_uploader("Upload Salary Slip or Document", type=["png", "jpg", "jpeg"])
 
 if uploaded_file:
-    st.image(uploaded_file, caption="Uploaded Document", use_column_width=True)
+    st.image(uploaded_file, caption="Uploaded Document", use_container_width=True)
 
     with st.spinner("🔍 Extracting text from document..."):
         extracted_text = run_ocr(uploaded_file)
