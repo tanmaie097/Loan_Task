@@ -6,7 +6,7 @@ def run_ocr(image):
     response = requests.post(
         url,
         files={'filename': image},
-        data={'apikey': 'YOUR_API_KEY_HERE', 'language': 'eng'},
+        data={'apikey': 'K84750525988957', 'language': 'eng'},
     )
     result = response.json()
     text = result.get("ParsedResults", [{}])[0].get("ParsedText", "")
