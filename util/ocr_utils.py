@@ -1,13 +1,15 @@
-import pytesseract
-import re
+import easyocr
+
+reader = easyocr.Reader(['en'], gpu=False)
 
 def run_ocr(image_np):
-    return pytesseract.image_to_string(image_np)
+    results = reader.readtext(image_np, detail=0)
+    return "\n".join(results)
 
 def extract_fields(text):
     fields = {}
 
-    # Simple regex patterns for demo purposes
+    # Simple patterns
     name_match = re.search(r"Name[:\-]?\s*(.*)", text, re.IGNORECASE)
     pan_match = re.search(r"[A-Z]{5}[0-9]{4}[A-Z]", text)
     income_match = re.search(r"Income[:\-]?\s*₹?([\d,]+)", text, re.IGNORECASE)
