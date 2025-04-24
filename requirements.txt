@@ -1,4 +1,5 @@
 streamlit
-pillow
-numpy
-requests
+pytesseract
+easyocr
+opencv-python==4.7.0.72
+pandas
