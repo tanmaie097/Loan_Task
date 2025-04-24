@@ -1,58 +1,59 @@
 import streamlit as st
-import numpy as np
-
-
 from PIL import Image
-import pandas as pd
-from util.ocr_utils import run_ocr
-from util.field_extraction import extract_important_fields
+from util.ocr_utils import run_ocr, extract_fields
 
-st.set_page_config(page_title="🧾 Loan Document Analyzer", layout="centered")
-st.title("📄 Automated Loan Document Processing")
+st.set_page_config(page_title="Loan Document Analyzer", layout="centered")
 
-uploaded_file = st.file_uploader("Upload a salary slip", type=["png", "jpg", "jpeg", "pdf"])
+st.title("📄 Automated Loan Document Processor")
+st.write("Upload a **salary slip** to check eligibility for a personal loan.")
+
+uploaded_file = st.file_uploader("Upload a salary slip", type=["png", "jpg", "jpeg"])
+
 if uploaded_file is not None:
-    from PIL import Image
     img = Image.open(uploaded_file)
     st.image(img, caption="Uploaded Document", use_column_width=True)
 
-    extracted_text = run_ocr(img)
-    # the rest of your code...
-
-
-    # OCR Text Extraction
-    extracted_text = run_ocr(img_np)
+    with st.spinner("🔍 Extracting text..."):
+        extracted_text = run_ocr(img)
+    
     st.subheader("🔍 Extracted Text")
-    st.text_area("Text", extracted_text, height=250)
+    st.text_area("Text", extracted_text, height=200)
 
-    # Extract Fields
-    extracted_fields, extra_info = extract_important_fields(extracted_text)
+    extracted_fields, extra_info = extract_fields(extracted_text)
 
-    # Display in Table
-    st.subheader("📊 Loan Eligibility Field Summary")
-    summary_data = []
+    st.subheader("📌 Extracted Fields")
+    st.write(extracted_fields)
+
+    # Check loan eligibility
     required_fields = ["Name", "PAN", "Income", "Bank Account Number"]
-    passed_fields = 0
+    field_status = []
+    match_count = 0
 
     for field in required_fields:
-        value = extracted_fields.get(field, "❌ Missing")
-        status = "✅ Present" if value != "❌ Missing" else "❌ Missing"
-        if status == "✅ Present":
-            passed_fields += 1
-        summary_data.append({"Field": field, "Value": value, "Status": status})
+        value = extracted_fields.get(field)
+        status = "✅ Present" if value else "❌ Missing"
+        if value:
+            match_count += 1
+        field_status.append((field, value or "—", status))
 
-    df_summary = pd.DataFrame(summary_data)
-    st.dataframe(df_summary, use_container_width=True)
+    # Show summary as a table
+    st.subheader("📊 Loan Eligibility Field Summary")
+    st.table(
+        {
+            "Field": [row[0] for row in field_status],
+            "Value": [row[1] for row in field_status],
+            "Status": [row[2] for row in field_status],
+        }
+    )
 
-    # Loan Eligibility
-    st.subheader("📌 Loan Eligibility Result")
-    if passed_fields >= 3:
-        st.success(f"✅ Eligible for Loan — {passed_fields}/4 required fields present")
+    # Eligibility decision
+    if match_count >= 3:
+        st.success("✅ This document is likely eligible for loan processing.")
     else:
-        st.error(f"❌ Not Eligible — Only {passed_fields}/4 fields present")
+        st.warning("⚠️ This document may be missing key information for eligibility.")
 
-    # Extra Info
+    # Show any extra useful info found
     if extra_info:
-        st.subheader("📋 Additional Info Found")
-        for key, val in extra_info.items():
-            st.write(f"**{key}:** {val}")
+        st.subheader("🧠 Additional Detected Details")
+        for key, value in extra_info.items():
+            st.write(f"**{key}**: {value}")
