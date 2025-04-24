@@ -9,7 +9,7 @@ def run_ocr(image: Image.Image) -> str:
     buffered.seek(0)
 
     # Call OCR API (like ocr.space or similar)
-    api_key = "your_api_key_here"
+    api_key = "K84750525988957"
     url = "https://api.ocr.space/parse/image"
 
     response = requests.post(
