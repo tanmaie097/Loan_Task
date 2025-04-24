@@ -1,62 +1,37 @@
 import requests
-from PIL import Image
-import numpy as np
-import io
 import re
 
-API_URL = "https://api.ocr.space/parse/image"
-API_KEY = "K84750525988957"  # 👈 Replace this with your actual key
-
 def run_ocr(image):
-    buffered = io.BytesIO()
-    pil_image = Image.fromarray(image)
-    pil_image.save(buffered, format="JPEG")
-    buffered.seek(0)
-
+    url = 'https://api.ocr.space/parse/image'
     response = requests.post(
-        API_URL,
-        files={"file": buffered},
-        data={"apikey": API_KEY, "language": "eng"},
+        url,
+        files={'filename': image},
+        data={'apikey': 'YOUR_API_KEY_HERE', 'language': 'eng'},  # Replace with your actual key
     )
 
-    result = response.json()
-    text = result.get("ParsedResults", [{}])[0].get("ParsedText", "")
-    return text
+    try:
+        result = response.json()
+        if result.get("IsErroredOnProcessing"):
+            return "OCR failed: " + result.get("ErrorMessage", ["Unknown error"])[0]
+        return result["ParsedResults"][0]["ParsedText"]
+    except Exception as e:
+        return f"OCR error: {e}"
 
 def extract_fields(text):
-    fields = {
-        "Name": None,
-        "PAN": None,
-        "Income": None,
-        "Bank Account Number": None,
-    }
+    fields = {}
 
-    extra_info = []
-
-    # Name
-    name_match = re.search(r"(?i)(name|john smith)[^\n]{0,30}", text)
-    if name_match:
-        fields["Name"] = name_match.group().strip()
-
-    # PAN (format: XXXXX1234X)
+    name_match = re.search(r"Name[:\-]?\s*(.*)", text, re.IGNORECASE)
     pan_match = re.search(r"[A-Z]{5}[0-9]{4}[A-Z]", text)
+    income_match = re.search(r"Income[:\-]?\s*₹?([\d,]+)", text, re.IGNORECASE)
+    amount_match = re.search(r"Loan Amount[:\-]?\s*₹?([\d,]+)", text, re.IGNORECASE)
+
+    if name_match:
+        fields["Name"] = name_match.group(1).strip()
     if pan_match:
-        fields["PAN"] = pan_match.group()
-
-    # Income (search for numeric patterns with salary/net/gross)
-    income_match = re.search(r"(?i)(net pay|gross pay|salary)[^\d]{0,10}([\d,]+\.?\d*)", text)
+        fields["PAN"] = pan_match.group(0).strip()
     if income_match:
-        fields["Income"] = income_match.group(2).replace(",", "")
+        fields["Income"] = income_match.group(1).strip()
+    if amount_match:
+        fields["Loan Amount"] = amount_match.group(1).strip()
 
-    # Bank Account Number (simple pattern)
-    bank_match = re.search(r"\b\d{9,18}\b", text)
-    if bank_match:
-        fields["Bank Account Number"] = bank_match.group()
-
-    # Extra details
-    lines = text.splitlines()
-    for line in lines:
-        if any(keyword in line.lower() for keyword in ["ifsc", "micr", "net pay", "account no"]):
-            extra_info.append(line.strip())
-
-    return fields, extra_info
+    return fields
