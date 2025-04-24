@@ -6,7 +6,7 @@ from util.ocr_utils import run_ocr, extract_fields
 st.set_page_config(page_title="Loan Document OCR", layout="centered")
 st.title("📄 Automated Personal Loan Document OCR")
 
-uploaded_file = st.file_uploader("Upload Loan Document (Image)", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("Upload Salary Slip or Document", type=["png", "jpg", "jpeg"])
 
 if uploaded_file:
     st.image(uploaded_file, caption="Uploaded Document", use_column_width=True)
@@ -22,7 +22,7 @@ if uploaded_file:
 
         st.subheader("📊 Loan Eligibility Field Summary")
 
-        important_fields = ["Name", "PAN", "Income", "Loan Amount"]
+        important_fields = ["Name", "PAN", "Income", "Bank Account Number"]
         data = []
 
         for field in important_fields:
@@ -33,11 +33,21 @@ if uploaded_file:
         df = pd.DataFrame(data)
         st.table(df)
 
-        # Loan Eligibility Logic
-        if all(item["Status"] == "✅ Present" for item in data):
-            st.success("🎉 This document appears COMPLETE and suitable for loan processing.")
-        else:
-            st.warning("⚠️ Some key fields are missing. Please review the document manually.")
+        # Eligibility Check: 3 out of 4 fields must be present
+        present_count = sum(1 for item in data if item["Status"] == "✅ Present")
 
+        if present_count >= 3:
+            st.success("🎯 Eligible: Sufficient information found for loan consideration.")
+        else:
+            st.warning("⚠️ Not Eligible: Please upload a clearer or more complete document.")
+
+        # Optional: Show extra fields found
+        st.subheader("📌 Extra Details (if any)")
+        extra_info = {k: v for k, v in fields.items() if k not in important_fields}
+        if extra_info:
+            for key, value in extra_info.items():
+                st.write(f"**{key}:** {value}")
+        else:
+            st.info("No additional fields detected.")
     else:
         st.error(extracted_text)
