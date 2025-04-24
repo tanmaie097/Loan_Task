@@ -44,6 +44,12 @@ if uploaded_file:
         st.success("✅ This document is likely eligible for loan processing.")
     else:
         st.error("❌ Not enough information for eligibility. At least 3 out of 4 key fields must be present.")
+        st.markdown("⚠️ Please try uploading a **clearer image** of the salary slip.")
+        
+        missing_fields = [field for field in key_fields if not extracted_data.get(field)]
+        st.markdown("#### ❌ Missing Key Fields:")
+        for field in missing_fields:
+            st.markdown(f"- {field}")
 
     if extra_fields:
         st.subheader("ℹ️ Extra Extracted Details")
