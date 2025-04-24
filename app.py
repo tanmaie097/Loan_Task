@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 from utils.ocr_utils import run_ocr, extract_fields
 
+
 st.set_page_config(page_title="Loan Document OCR", layout="centered")
 st.title("📄 Automated Loan Document Extractor")
 
