@@ -1,50 +1,52 @@
+# File: app.py
 import streamlit as st
-from PIL import Image
-import pandas as pd
 from util.ocr_utils import run_ocr, extract_fields
+from PIL import Image
+import io
+import pandas as pd
 
-st.set_page_config(page_title="📄 Automated Loan Document Processor", layout="centered")
+st.set_page_config(page_title="📄 Automated Loan Document Processor")
 
 st.title("📄 Automated Loan Document Processor")
-st.write("Upload a salary slip to check eligibility for a personal loan.")
+st.markdown("Upload a salary slip to check eligibility for a personal loan.")
 
-uploaded_file = st.file_uploader("Upload a salary slip", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader(
+    "Upload a salary slip", type=["png", "jpg", "jpeg"], label_visibility="collapsed"
+)
 
 if uploaded_file is not None:
-    st.subheader("🖼️ Uploaded Document")
-    img = Image.open(uploaded_file)
-    st.image(img, caption="Uploaded Image", use_container_width=True)
+    st.image(uploaded_file, caption="Uploaded Document", use_container_width=True)
 
-    with st.spinner("🔍 Extracting text from document..."):
-        extracted_text = run_ocr(img)
-    
-    st.subheader("🔍 Extracted Text")
+    # Convert uploaded image to bytes
+    image_bytes = uploaded_file.getvalue()
+
+    with st.spinner("🔍 Extracting text from image..."):
+        extracted_text = run_ocr(image_bytes)
+
+    st.subheader("📝 Extracted Text")
     st.text_area("Text", extracted_text, height=200)
 
-    with st.spinner("📌 Extracting key fields..."):
-        fields, extra_info = extract_fields(extracted_text)
+    fields = extract_fields(extracted_text)
 
-    # Prepare data for table
-    expected_fields = ["Name", "PAN", "Income", "Bank Account Number"]
-    data = []
-    for field in expected_fields:
-        value = fields.get(field, "❌ Missing")
-        status = "✅ Present" if value != "❌ Missing" else "❌ Missing"
-        data.append({"Field": field, "Value": value, "Status": status})
+    # Loan eligibility: 3 of 4 fields present
+    present_count = sum(1 for v in list(fields.values())[:4] if v)
+    is_eligible = present_count >= 3
 
-    df = pd.DataFrame(data)
+    df = pd.DataFrame({
+        "Field": ["Name", "PAN", "Income", "Bank Account Number"],
+        "Value": [fields["Name"], fields["PAN"], fields["Income"], fields["Bank Account Number"]],
+        "Status": ["✅ Present" if fields[k] else "❌ Missing" for k in ["Name", "PAN", "Income", "Bank Account Number"]]
+    })
 
     st.subheader("📊 Loan Eligibility Field Summary")
     st.dataframe(df, use_container_width=True)
 
-    present_fields = sum(1 for row in data if row["Status"] == "✅ Present")
-
-    if present_fields >= 3:
-        st.success("🎉 Eligible for Personal Loan ✅")
+    if is_eligible:
+        st.success("🎉 Eligible for Loan")
     else:
-        st.error("❌ Not Eligible for Personal Loan")
+        st.error("❌ Not Eligible for Loan - Minimum 3 fields required")
 
-    if extra_info:
-        st.subheader("📎 Extra Extracted Details")
-        for key, value in extra_info.items():
-            st.markdown(f"**{key}**: {value}")
+    if fields["Extra Details"]:
+        st.subheader("📌 Additional Extracted Information")
+        for detail in fields["Extra Details"]:
+            st.markdown(f"- {detail}")
