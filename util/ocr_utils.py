@@ -1,15 +1,20 @@
-import easyocr
+import requests
+import re
 
-reader = easyocr.Reader(['en'], gpu=False)
-
-def run_ocr(image_np):
-    results = reader.readtext(image_np, detail=0)
-    return "\n".join(results)
+def run_ocr(image):
+    url = 'https://api.ocr.space/parse/image'
+    response = requests.post(
+        url,
+        files={'filename': image},
+        data={'apikey': 'YOUR_API_KEY_HERE', 'language': 'eng'},
+    )
+    result = response.json()
+    text = result.get("ParsedResults", [{}])[0].get("ParsedText", "")
+    return text
 
 def extract_fields(text):
     fields = {}
 
-    # Simple patterns
     name_match = re.search(r"Name[:\-]?\s*(.*)", text, re.IGNORECASE)
     pan_match = re.search(r"[A-Z]{5}[0-9]{4}[A-Z]", text)
     income_match = re.search(r"Income[:\-]?\s*₹?([\d,]+)", text, re.IGNORECASE)
