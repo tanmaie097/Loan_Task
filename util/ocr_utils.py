@@ -1,13 +1,9 @@
 # File: util/ocr_utils.py
 import requests
-import numpy as np
-import cv2
-from PIL import Image
-import io
-import base64
+import re
 
 API_URL = "https://api.ocr.space/parse/image"
-API_KEY = "K84750525988957"  # Replace with your key
+API_KEY = "K84750525988957"  # Replace this with your actual key
 
 def run_ocr(image_bytes):
     response = requests.post(
@@ -20,29 +16,48 @@ def run_ocr(image_bytes):
     return text
 
 def extract_fields(text):
-    fields = {
-        "Name": None,
-        "PAN": None,
-        "Income": None,
-        "Bank Account Number": None,
-        "Extra Details": []
-    }
+    name = None
+    pan = None
+    income = None
+    bank_acc = None
+    extra = []
 
     lines = text.splitlines()
+
     for line in lines:
-        line = line.strip()
+        l = line.strip()
+        # Name detection
+        if not name and re.search(r"Name[:\-]?\s*([A-Za-z\s]+)", l, re.I):
+            name = re.findall(r"Name[:\-]?\s*([A-Za-z\s]+)", l, re.I)[0]
+        elif not name and re.match(r"^[A-Z][a-z]+,?\s+[A-Z][a-z]+", l):
+            name = l.strip()
 
-        if any(key in line.lower() for key in ["name", "john", "smith"]):
-            fields["Name"] = line
-        elif "pan" in line.lower() or ("xxxx" in line.lower() and len(line) >= 10):
-            fields["PAN"] = line
-        elif any(k in line.lower() for k in ["income", "net pay", "salary"]):
-            if any(c.isdigit() for c in line):
-                fields["Income"] = line
-        elif any(k in line.lower() for k in ["account", "bank"]):
-            if any(c.isdigit() for c in line):
-                fields["Bank Account Number"] = line
-        elif len(line.strip()) > 6:
-            fields["Extra Details"].append(line)
+        # PAN detection
+        if not pan:
+            match = re.search(r"\b([A-Z]{5}[0-9]{4}[A-Z])\b", l)
+            if match:
+                pan = match.group(1)
 
-    return fields
+        # Income detection
+        if not income:
+            match = re.search(r"\b(?:Net Pay|Net Income|Gross Income)[^\d]*([\d,]+\.\d{2})\b", l, re.I)
+            if match:
+                income = match.group(1).replace(",", "")
+
+        # Bank account detection
+        if not bank_acc:
+            match = re.search(r"\b(?:A/c(?:count)? No\.?|Account Number)[^\d]*(\d{6,})\b", l, re.I)
+            if match:
+                bank_acc = match.group(1)
+
+        # Extra details
+        if any(keyword in l.lower() for keyword in ['pay', 'amount', 'salary', 'income']) and l not in extra:
+            extra.append(l)
+
+    return {
+        "Name": name,
+        "PAN": pan,
+        "Income": income,
+        "Bank Account Number": bank_acc,
+        "Extra Details": extra
+    }
